@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>智能客服质量监控与培训 Agent | 仪表盘</title>
+    <!-- 字体与图标库 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- 图表库 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0A0C12;
+            font-family: 'Inter', sans-serif;
+            padding: 24px 28px;
+            color: #EFF3F8;
+        }
+
+        /* 整体网格容器 - 不对称网格布局 */
+        .dashboard {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 0.9fr 1.1fr;  /* 三列不对称宽度 */
+            grid-auto-rows: auto;
+            gap: 22px;
+            align-items: start;
+        }
+
+        /* 卡片通用样式：深色半透明/纯黑底 + 精致边框 + 琥珀点缀 */
+        .card {
+            background: rgba(18, 22, 30, 0.85);
+            backdrop-filter: blur(2px);
+            border-radius: 28px;
+            border: 1px solid rgba(245, 158, 76, 0.25);
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(245, 158, 76, 0.05) inset;
+            transition: all 0.2s ease;
+            overflow: hidden;
+            padding: 1.25rem 1.5rem;
+        }
+
+        .card:hover {
+            border-color: rgba(245, 158, 76, 0.5);
+            box-shadow: 0 24px 40px -14px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(245, 158, 76, 0.2) inset;
+        }
+
+        /* 头部装饰线条 */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            border-bottom: 1px dashed rgba(245, 158, 76, 0.35);
+            padding-bottom: 0.65rem;
+        }
+        .card-header h3 {
+            font-weight: 600;
+            font-size: 1.1rem;
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-header h3 i {
+            color: #F59E4C;
+            font-size: 1.2rem;
+        }
+        .badge-amber {
+            background: rgba(245, 158, 76, 0.18);
+            padding: 4px 10px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #F59E4C;
+            border: 0.5px solid rgba(245,158,76,0.4);
+        }
+
+        /* 数值和指标样式 */
+        .kpi-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .kpi-item {
+            flex: 1;
+            background: #0F1219;
+            border-radius: 20px;
+            padding: 12px 10px;
+            text-align: center;
+            border: 1px solid #20232c;
+        }
+        .kpi-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 500;
+            letter-spacing: 1px;
+            color: #A1A7B5;
+        }
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #F59E4C;
+            line-height: 1.2;
+            margin-top: 6px;
+        }
+        .trend-up {
+            font-size: 0.7rem;
+            color: #4ade80;
+            margin-left: 6px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 260px;
+            margin-top: 8px;
+        }
+        .small-chart {
+            height: 220px;
+        }
+
+        /* 训练任务列表 */
+        .task-list {
+            margin-top: 10px;
+        }
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .task-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .task-name {
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        .progress-bar-bg {
+            width: 160px;
+            height: 5px;
+            background: #232730;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #F59E4C;
+            width: 0%;
+            border-radius: 10px;
+        }
+        .task-status {
+            font-size: 0.7rem;
+            font-weight: 500;
+            background: #1E212A;
+            padding: 4px 8px;
+            border-radius: 40px;
+            color: #F59E4C;
+        }
+
+        /* 质量分数环形图容器 + 双环效果布局 */
+        .double-gauge {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .gauge-item {
+            flex: 1;
+            text-align: center;
+        }
+        .gauge-title {
+            font-size: 0.75rem;
+            margin-bottom: 6px;
+            color: #ADB3C2;
+        }
+        .circular-chart {
+            width: 100px;
+            margin: 0 auto;
+        }
+
+        /* 语义反馈区块 */
+        .feedback-tag {
+            background: rgba(245,158,76,0.12);
+            padding: 7px 12px;
+            border-radius: 28px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin: 4px 6px 4px 0;
+            display: inline-block;
+            border-left: 2px solid #F59E4C;
+        }
+
+        /* 不对称跨列布局自定义 */
+        .span-2cols {
+            grid-column: span 2;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* 底部培训建议模块 */
+        .suggestions-grid {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .suggestion-card {
+            background: #10131C;
+            border-radius: 20px;
+            padding: 12px 18px;
+            flex: 1;
+            border-left: 3px solid #F59E4C;
+        }
+        .suggestion-card p {
+            font-size: 0.85rem;
+            font-weight: 400;
+        }
+        hr {
+            border-color: rgba(245,158,76,0.2);
+            margin: 8px 0;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1100px) {
+            body { padding: 16px; }
+            .dashboard {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .span-2cols {
+                grid-column: span 1;
+            }
+        }
+
+        /* 简单动画 */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(10px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .card {
+            animation: fadeSlideUp 0.3s ease-out forwards;
+        }
+        .footer-note {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.7rem;
+            color: #5F6679;
+            border-top: 1px solid rgba(245,158,76,0.2);
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    
+    <!-- 卡片1: 关键KPI区域 - 质量总览 + CSAT等 (第一行左侧，占1列) -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-line"></i> 质量总览</h3>
+            <div class="badge-amber">实时更新</div>
+        </div>
+        <div class="kpi-grid">
+            <div class="kpi-item">
+                <div class="kpi-label">综合质量分</div>
+                <div class="kpi-value">87.4<span style="font-size: 1rem;">/100</span></div>
+                <div><i class="fas fa-arrow-up trend-up"></i><span class="trend-up"> +2.1%</span></div>
+            </div>
+            <div class="kpi-item">
+                <div class="kpi-label">CSAT</div>
+                <div class="kpi-value">4.62<span style="font-size: 1rem;">/5</span></div>
+                <div><i class="fas fa-chart-line" style="color:#F59E4C; font-size:0.7rem;"></i> 优质</div>
+            </div>
+            <div class="kpi-item">
+                <div class="kpi-label">解决率</div>
+                <div class="kpi-value">92.3<span style="font-size: 1rem;">%</span></div>
+                <div><span class="trend-up">↑ 3%</span></div>
+            </div>
+        </div>
+        <div style="margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-size: 0.7rem;">质检通过率趋势</span>
+                <span style="font-size: 0.7rem; color:#F59E4C;">+4% 较上周</span>
+            </div>
+            <div class="progress-bar-bg" style="width:100%;">
+                <div class="progress-fill" style="width: 87%;"></div>
+            </div>
+        </div>
+        <div style="margin-top: 18px;">
+            <div style="font-size:0.7rem; color:#C9CFDF;"><i class="fas fa-microphone-alt"></i> 今日已质检会话：342通</div>
+            <div style="font-size:0.7rem; margin-top:6px;"><i class="fas fa-robot"></i> Agent智能辅助覆盖率 76%</div>
+        </div>
+    </div>
+
+    <!-- 卡片2: 情绪与满意度仪表 环形图（使用echarts双计量）占用第2列 -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-smile-wink"></i> 情感与满意度</h3>
+            <div class="badge-amber">NLP分析</div>
+        </div>
+        <div class="double-gauge">
+            <div class="gauge-item">
+                <div class="gauge-title">正面情绪占比</div>
+                <div id="posEmotionChart" style="width: 100px; height: 100px; margin: 0 auto;"></div>
+                <div style="font-weight:600; margin-top:5px;">78%</div>
+            </div>
+            <div class="gauge-item">
+                <div class="gauge-title">负面情绪占比</div>
+                <div id="negEmotionChart" style="width: 100px; height: 100px; margin: 0 auto;"></div>
+                <div style="font-weight:600; margin-top:5px;">12%</div>
+            </div>
+        </div>
+        <div style="margin-top: 8px; text-align: center;">
+            <span class="feedback-tag"><i class="fas fa-thumbs-up"></i> 共情表达提升23%</span>
+            <span class="feedback-tag"><i class="fas fa-exclamation-triangle"></i> 高频抱怨词: 等待时长</span>
+        </div>
+    </div>
+
+    <!-- 卡片3: 右侧上半部分 - 质检评分分布柱状图 (第三列) -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-bar"></i> 质量评分分布</h3>
+            <div class="badge-amber">近30天</div>
+        </div>
+        <div id="scoreDistChart" class="chart-container" style="height: 240px;"></div>
+    </div>
+
+    <!-- 第二行: 不对称布局，左侧跨两列展示实时会话质量监控 + 缺陷排行 -->
+    <div class="card span-2cols">
+        <div class="card-header">
+            <h3><i class="fas fa-headset"></i> 实时会话监控 & 缺陷热点</h3>
+            <div class="badge-amber"><i class="fas fa-clock"></i> 动态刷新</div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+            <!-- 左侧表格样式的实时质检流 -->
+            <div style="flex: 1.5; min-width: 200px;">
+                <div style="font-size:0.7rem; font-weight:500; margin-bottom: 12px;">最近质检会话 (评分与违规)</div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1.2fr; gap: 8px; font-size:0.7rem; color:#B0B6C8;">
+                        <span>会话ID</span><span>质检分</span><span>主要缺陷</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1.2fr; gap: 8px; align-items: center; background:#0C0F16; padding: 8px; border-radius: 14px;">
+                        <span>#241029-001</span><span style="color:#F59E4C; font-weight:600;">92</span><span>话术不规范</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1.2fr; gap: 8px; align-items: center; background:#0C0F16; padding: 8px; border-radius: 14px;">
+                        <span>#241029-045</span><span style="color:#F59E4C; font-weight:600;">78</span><span>未解决投诉情绪</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1.2fr; gap: 8px; align-items: center; background:#0C0F16; padding: 8px; border-radius: 14px;">
+                        <span>#241028-102</span><span style="color:#F59E4C; font-weight:600;">65</span><span>流程遗漏+重复</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1.2fr; gap: 8px; align-items: center; background:#0C0F16; padding: 8px; border-radius: 14px;">
+                        <span>#241028-088</span><span style="color:#F59E4C; font-weight:600;">88</span><span>回应延迟</span>
+                    </div>
+                </div>
+            </div>
+            <!-- 右侧缺陷统计 -->
+            <div style="flex: 1;">
+                <div style="font-size:0.7rem; font-weight:500; margin-bottom: 8px;"><i class="fas fa-bug"></i> Top3 缺陷原因</div>
+                <div style="margin-bottom: 12px;">
+                    <div>1. 响应超时 / 冷场 &nbsp;<span style="float:right;">34%</span></div>
+                    <div class="progress-bar-bg mt-1"><div class="progress-fill" style="width:34%"></div></div>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <div>2. 缺乏共情 &nbsp;<span style="float:right;">28%</span></div>
+                    <div class="progress-bar-bg mt-1"><div class="progress-fill" style="width:28%"></div></div>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <div>3. 知识库错误引用 &nbsp;<span style="float:right;">19%</span></div>
+                    <div class="progress-bar-bg mt-1"><div class="progress-fill" style="width:19%"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 第二行右侧独立卡片: 培训完成度与KPIs (第三个列的单独区块) 这个卡片占据第三个列位置，紧随左侧大卡片之后，grid自动匹配-->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-graduation-cap"></i> 培训完成度</h3>
+            <div class="badge-amber">月度达标</div>
+        </div>
+        <div style="text-align: center;">
+            <div id="trainingGaugeChart" style="height: 170px; width: 100%;"></div>
+        </div>
+        <div style="margin-top: 5px; text-align:center; font-size: 0.75rem;">当前培训进度: 68% <span style="color:#F59E4C;">(目标85%)</span></div>
+        <div style="margin-top: 12px;">
+            <div><i class="fas fa-check-circle" style="color:#F59E4C;"></i> 已完成课程: 14/22</div>
+            <div><i class="fas fa-chart-simple"></i> 小组通过率提升: +12%</div>
+        </div>
+    </div>
+
+    <!-- 第三行：左侧展示智能培训推荐 (跨列增加视觉丰富度) 不对称: 我们可以让这个占据前两列 -->
+    <div class="card span-2cols">
+        <div class="card-header">
+            <h3><i class="fas fa-lightbulb"></i> AI 培训推荐引擎</h3>
+            <div class="badge-amber">基于质检缺陷主动推送</div>
+        </div>
+        <div class="suggestions-grid">
+            <div class="suggestion-card">
+                <i class="fas fa-comment-dots" style="color:#F59E4C;"></i> <strong>共情表达训练营</strong>
+                <p>针对近期负面情绪上升12%，推荐“共情四步法”微课，参训后预计满意度提升0.3pt。</p>
+                <div class="badge-amber" style="display: inline-block; margin-top:6px;">🔥 高优先级</div>
+            </div>
+            <div class="suggestion-card">
+                <i class="fas fa-database"></i> <strong>知识库精准查询</strong>
+                <p>错误引用高频发生，建议强化FAQ检索课程 + 模拟场景考核，改善知识缺陷。</p>
+                <div class="badge-amber">23人待培训</div>
+            </div>
+            <div class="suggestion-card">
+                <i class="fas fa-clock"></i> <strong>响应时效优化</strong>
+                <p>平均应答时长超限(32s)，推荐“高效话术+快捷短语”专项训练。</p>
+            </div>
+        </div>
+        <div style="margin-top: 18px; background: #0b0e15; border-radius: 20px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fas fa-chalkboard-user"></i> 智能质检校准会 | 下周二 15:00</span>
+                <span class="badge-amber">剩余名额 8</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 第三行右侧卡片: 培训反馈与效果 (最后一个不对称卡片) -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-chart-simple"></i> 培训效果追踪</h3>
+            <div class="badge-amber">闭环分析</div>
+        </div>
+        <div id="effectTrendChart" class="small-chart" style="height: 180px;"></div>
+        <div style="margin-top: 8px;">
+            <div><i class="fas fa-users"></i> 上月参训人数: 142人</div>
+            <div><i class="fas fa-medal"></i> 质检均分提升: 4.2 → 4.7 (满分5) </div>
+            <hr>
+            <div class="feedback-tag">推荐准确率91%</div>
+            <div class="feedback-tag">培训NPS +46</div>
+        </div>
+    </div>
+
+</div>
+<div class="footer-note">
+    <i class="fas fa-chart-line"></i> 智能客服质量监控与培训 Agent · 数据基于实时AI分析 | 琥珀色洞察引擎
+</div>
+
+<script>
+    // 延迟初始化所有图表，确保容器加载完毕
+    window.addEventListener('load', function() {
+        // 1. 正面情绪环形图（echarts 饼图）
+        var posChart = echarts.init(document.getElementById('posEmotionChart'));
+        posChart.setOption({
+            tooltip: { show: false },
+            series: [{
+                type: 'pie',
+                radius: ['70%', '90%'],
+                avoidLabelOverlap: false,
+                label: { show: false },
+                emphasis: { scale: false },
+                data: [{ value: 78, name: '正面', itemStyle: { color: '#F59E4C' } },
+                        { value: 22, name: '其他', itemStyle: { color: '#2A2E3A' } }],
+                startAngle: 90,
+                animation: true
+            }],
+            grid: { top: 0, left: 0, right: 0, bottom: 0 }
+        });
+
+        var negChart = echarts.init(document.getElementById('negEmotionChart'));
+        negChart.setOption({
+            series: [{
+                type: 'pie', radius: ['70%', '90%'], label: { show: false },
+                data: [{ value: 12, name: '负面', itemStyle: { color: '#E06C6C' } },
+                        { value: 88, name: '非负面', itemStyle: { color: '#2A2E3A' } }]
+            }]
+        });
+
+        // 2. 质检评分分布柱状图
+        var scoreDist = echarts.init(document.getElementById('scoreDistChart'));
+        scoreDist.setOption({
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+            grid: { top: 30, left: 40, right: 10, bottom: 20, containLabel: true },
+            xAxis: { type: 'category', data: ['60-69', '70-79', '80-89', '90-100'], axisLabel: { color: '#B0B6C8' } },
+            yAxis: { type: 'value', name: '会话数量', nameTextStyle: { color: '#A1A7B5' }, axisLabel: { color: '#A1A7B5' } },
+            series: [{
+                data: [18, 45, 112, 167], type: 'bar', barWidth: '45%',
+                itemStyle: { borderRadius: [8,8,0,0], color: '#F59E4C', shadowColor: 'rgba(245,158,76,0.3)' },
+                label: { show: true, color: '#fff', position: 'top' }
+            }]
+        });
+
+        // 3. 培训完成度仪表盘(类似圆环进度)
+        var trainGauge = echarts.init(document.getElementById('trainingGaugeChart'));
+        trainGauge.setOption({
+            series: [{
+                type: 'gauge', center: ['50%', '55%'], radius: '70%',
+                startAngle: 180, endAngle: 0, min: 0, max: 100,
+                progress: { show: true, width: 18, itemStyle: { color: '#F59E4C' } },
+                axisLine: { lineStyle: { width: 18, color: [[0.68, '#2C2F3E'],[1, '#2C2F3E']] } },
+                axisTick: { show: false }, splitLine: { show: false },
+                axisLabel: { show: false }, pointer: { show: false },
+                detail: { show: false }, title: { show: false },
+            }]
+        });
+        trainGauge.setOption({
+            series: [{
+                detail: { show: true, offsetCenter: [0, 20], valueAnimation: true, fontSize: 16, color: '#F59E4C', formatter: '68%' }
+            }]
+        });
+        trainGauge.setOption({ series: [{ progress: { show: true, itemStyle: { color: '#F59E4C' } }, data: [{ value: 68, name: '完成率' }] }] });
+
+        // 4. 培训效果追踪折线图(前后质量对比)
+        var effectChart = echarts.init(document.getElementById('effectTrendChart'));
+        effectChart.setOption({
+            tooltip: { trigger: 'axis' },
+            xAxis: { type: 'category', data: ['W1', 'W2', 'W3', '本周'], axisLabel: { color: '#ADB3C2' } },
+            yAxis: { type: 'value', name: '平均质检分', min: 70, max: 92, axisLabel: { color: '#ADB3C2' } },
+            series: [{
+                data: [78.2, 80.5, 84.3, 87.4], type: 'line', smooth: true,
+                lineStyle: { width: 3, color: '#F59E4C' }, symbol: 'circle', symbolSize: 8,
+                areaStyle: { opacity: 0.2, color: '#F59E4C' }, itemStyle: { color: '#F59E4C' }
+            }],
+            grid: { top: 28, left: 45, right: 10, bottom: 15 }
+        });
+
+        // 额外动态数据刷新模拟真实感(为了展示培训任务list在页面内也可以动态增加模拟任务完成度卡片)，但无需新增图表，用现有组件演示已完成
+        // 为了让仪表盘感觉更鲜活，我们在缺陷排行区域添加一个模拟的定时更新效果(仅动态修改某个数字小量)，可选，但保持美观
+        // 增加一个异步培训任务建议提示文字变化不是必须的，但为了动态感，简单的更新培训任务数据的小提示。
+        // 直接在现有的第三行培训推荐引擎增加一组动态提示? 但无需复杂，页面已经具备多种数据可视化。
+    });
+
+    // 可选小交互：鼠标移动进展条动画模拟略微修正（无实际请求）
+    // 确保所有echarts容器自适应
+    window.addEventListener('resize', function() {
+        let charts = ['posEmotionChart', 'negEmotionChart', 'scoreDistChart', 'trainingGaugeChart', 'effectTrendChart'];
+        charts.forEach(id => {
+            let chart = echarts.getInstanceByDom(document.getElementById(id));
+            if(chart) chart.resize();
+        });
+    });
+    // 手动触发一次初始加载
+    setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+    }, 100);
+</script>
+<!-- 完成，完全符合深色仪表盘，不对称网格布局及琥珀色点缀 -->
+</body>
+</html>
